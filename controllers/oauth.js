@@ -7,46 +7,63 @@ const oauthRouter = express.Router();
 // store keys temporarily
 const keys = {};
 
-oauthRouter.post("generate-key", (req, res) => {
+oauthRouter.post("/generate-key", (req, res) => {
+
     const writeKey = crypto.randomBytes(16).toString("hex");
     const readKey = crypto.randomBytes(16).toString("hex");
 
     keys[writeKey] = { readKey, value: null };
 
-    res.json({ writeKey });
+    res.json({ writeKey, readKey });
 });
 
-oauthRouter.get("oauth/start", (req, res) => {
+oauthRouter.get("/oauth/start", (req, res) => {
+
     const writeKey = req.query.key;
     const state = encodeURIComponent(writeKey);
 
-    const authUrl = `https://oauth-provider.com/auth?client_id=YOUR_CLIENT_ID&redirect_uri=https://your-server.com/oauth/callback&response_type=code&state=${state}`;
+    // const authUrl = `https://www.figma.com/oauth?
+    // client_id=MZiLaIQZOty2xfljvPIKxU&
+    // redirect_uri=callback&
+    // scope=scope&
+    // state=${state}&
+    // response_type=code`;
+
+    const authUrl = `https://www.figma.com/oauth?client_id=MZiLaIQZOty2xfljvPIKxU&redirect_uri=http://localhost:4000/api/oauth/callback&response_type=code&scope=files:read&state=${state}`
 
     res.redirect(authUrl)
 });
 
-oauthRouter.get("oauth/callback", async (req, res) => {
-    const code = req.query.code;
-    const state = req.query.state;
-    const writeKey = decodeURIComponent(state);
+oauthRouter.get("/oauth/callback", async (req, res) => {
+    try {
+        const code = req.query.code;
+        const state = req.query.state;
+        const writeKey = decodeURIComponent(state);
 
-    // exchange code for token
-    const response = await axios.post("https://oauth-provider.com/token", {
-        method: "Post",
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: `client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET&code=${code}&grant_type=authorization_code&redirect_uri=https://your-server.com/oauth/callback`
-    })
+        // exchange code for token
+        const response = await axios.post("https://www.figma.com/api/oauth/token",
+            `client_id=MZiLaIQZOty2xfljvPIKxU&client_secret=qXIYpKOiVNGHTjuVcVrDnLgQmyWN18&code=${code}&grant_type=authorization_code&redirect_uri=http://localhost:4000/api/oauth/callback`,
+            {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            }
+        );
 
-    const data = await response.json();
-    const accessToken = data?.access_token;
+        const data = response.data;
+        const accessToken = data.access_token;
 
-    // Write the access token using the write key
-    if (keys[writeKey]) {
-        keys[writeKey].value = accessToken;
+        // Write the access token using the write key
+        if (keys[writeKey]) {
+            keys[writeKey].value = accessToken;
 
-        res.send("Authentication successful. You can close this window.")
+            res.send("Authentication successful. You can close this window.");
+        } else {
+            res.status(400).send("Invalid state or write key.");
+        }
+    } catch (error) {
+        console.error("Error during OAuth callback:", error.message);
+        res.status(500).send("An error occurred during the authentication process.");
     }
 });
 
