@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path")
 const cors = require('cors')
 const dotenv = require("dotenv");
 const oauthRouter = require("./controllers/oauth");
@@ -9,6 +10,9 @@ const app = express();
 dotenv.config();
 
 const Port = process.env.PORT || 4001;
+
+app.set("view engine", "ejs");
+app.set("views", path.resolve("./views"))
 
 app.use(express.json());
 

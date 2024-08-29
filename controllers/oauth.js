@@ -52,7 +52,6 @@ oauthRouter.get("/oauth/callback", async (req, res) => {
         );
 
         const data = response.data;
-        console.log("data: ", data)
         await axios.post("http://localhost:4000/api/user/create", {
 
             user: data.user_id,
@@ -64,7 +63,8 @@ oauthRouter.get("/oauth/callback", async (req, res) => {
         if (keys[writeKey]) {
             keys[writeKey].value = accessToken;
 
-            res.send("Authentication successful. You can close this window.");
+            // res.send("Authentication successful. You can close this window.");
+            res.render("login-success")
         } else {
             res.status(400).send("Invalid state or write key.");
         }
