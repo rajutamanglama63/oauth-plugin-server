@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const crypto = require("crypto");
 const axios = require("axios");
@@ -29,7 +30,7 @@ oauthRouter.get("/oauth/start", (req, res) => {
     // state=${state}&
     // response_type=code`;
 
-    const authUrl = `https://www.figma.com/oauth?client_id=MZiLaIQZOty2xfljvPIKxU&redirect_uri=http://localhost:4000/api/oauth/callback&response_type=code&scope=files:read&state=${state}`
+    const authUrl = `https://www.figma.com/oauth?client_id=${process.env.FIGMA_CLIENT_ID}&redirect_uri=http://localhost:4000/api/oauth/callback&response_type=code&scope=files:read&state=${state}`
 
     res.redirect(authUrl)
 });
@@ -42,7 +43,7 @@ oauthRouter.get("/oauth/callback", async (req, res) => {
 
         // exchange code for token
         const response = await axios.post("https://www.figma.com/api/oauth/token",
-            `client_id=MZiLaIQZOty2xfljvPIKxU&client_secret=qXIYpKOiVNGHTjuVcVrDnLgQmyWN18&code=${code}&grant_type=authorization_code&redirect_uri=http://localhost:4000/api/oauth/callback`,
+            `client_id=${process.env.FIGMA_CLIENT_ID}&client_secret=${process.env.FIGMA_CLIENT_SECRET}&code=${code}&grant_type=authorization_code&redirect_uri=http://localhost:4000/api/oauth/callback`,
             {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
@@ -51,6 +52,12 @@ oauthRouter.get("/oauth/callback", async (req, res) => {
         );
 
         const data = response.data;
+        console.log("data: ", data)
+        await axios.post("http://localhost:4000/api/user/create", {
+
+            user: data.user_id,
+        });
+
         const accessToken = data.access_token;
 
         // Write the access token using the write key
